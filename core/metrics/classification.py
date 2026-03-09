@@ -1,48 +1,45 @@
-"""Frame-level classification metrics.
+"""Frame-level classification metrics for forgery localization.
 
-Used by all methods: Precision, Recall, F1 at frame level.
-Reference: FARA paper (Luo et al., IEEE TASLP 2026) Section IV-B.
+Provides Precision, Recall, and F1-score computed over binary
+frame-level predictions vs ground-truth labels.
 """
 from typing import Dict
 
 import numpy as np
-from sklearn.metrics import precision_score, recall_score, f1_score
 
 
 def compute_frame_metrics(
     predictions: np.ndarray,
     labels: np.ndarray,
-    pos_label: int = 1,
 ) -> Dict[str, float]:
     """Compute frame-level Precision, Recall, and F1.
 
     Args:
         predictions: 1D binary array of predicted labels. Shape: (N,).
-        labels: 1D binary array of ground truth labels. Shape: (N,).
-        pos_label: Label considered as positive (spoof). Default: 1.
+        labels: 1D binary array of ground truth. Shape: (N,). 1=spoof, 0=bonafide.
 
     Returns:
-        Dict with keys 'precision', 'recall', 'f1'.
+        Dict with keys: 'precision', 'recall', 'f1'.
 
     Raises:
-        ValueError: If inputs are empty or mismatched.
+        ValueError: If inputs are empty.
     """
     if len(predictions) == 0 or len(labels) == 0:
-        raise ValueError("Predictions and labels must not be empty.")
-    if len(predictions) != len(labels):
-        raise ValueError(
-            f"Predictions ({len(predictions)}) and labels ({len(labels)}) "
-            "must have same length."
-        )
+        raise ValueError("Predictions and labels must be non-empty.")
+
+    predictions = np.asarray(predictions, dtype=np.int32)
+    labels = np.asarray(labels, dtype=np.int32)
+
+    tp = int(np.sum((predictions == 1) & (labels == 1)))
+    fp = int(np.sum((predictions == 1) & (labels == 0)))
+    fn = int(np.sum((predictions == 0) & (labels == 1)))
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
 
     return {
-        "precision": float(precision_score(
-            labels, predictions, pos_label=pos_label, zero_division=0.0
-        )),
-        "recall": float(recall_score(
-            labels, predictions, pos_label=pos_label, zero_division=0.0
-        )),
-        "f1": float(f1_score(
-            labels, predictions, pos_label=pos_label, zero_division=0.0
-        )),
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
     }
