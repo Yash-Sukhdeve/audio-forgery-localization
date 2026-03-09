@@ -1,0 +1,9 @@
+[project]
+name = "audio-forgery-localization"
+version = "0.1.0"
+description = "Audio forgery localization: FARA reimplementation and baseline comparison"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
