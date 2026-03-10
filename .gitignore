@@ -1,0 +1,6 @@
+# UWS internal hooks (session-specific)
+.uws/
+
+# Claude Code project config
+.claude/
+checkpoints/
