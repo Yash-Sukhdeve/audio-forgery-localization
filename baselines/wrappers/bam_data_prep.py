@@ -3,16 +3,19 @@
 Creates symlinks and preprocesses boundary labels. Does NOT modify
 the BAM repository or the original dataset.
 
-BAM expects:
-    {data_dir}/raw/{split}/     -> audio .wav files
-    {data_dir}/{split}_seglab_{resolution}.npy  -> segment labels
-    {data_dir}/boundary/{utt_id}_boundary.npy  -> boundary labels per utterance
+BAM expects (from its ps_preprocess.py and dataset/partialspoof.py):
+    {data_dir}/raw/{split}/                                    -> audio .wav files
+    {data_dir}/{split}_seglab_{resolution}.npy                 -> segment labels
+    {data_dir}/boundary_{resolution}_labels/{split}/{utt_id}_boundary.npy  -> boundary labels
+
+BAM's native resolution is 0.16s (160ms). PartialSpoof provides labels at
+multiple resolutions including 0.16s.
 
 Usage:
     python baselines/wrappers/bam_data_prep.py \
         --ps_root /media/lab2208/ssd/datasets/PartialSpoof/database \
         --output_dir baselines/repos/BAM/data \
-        --resolution 0.02
+        --resolution 0.16
 """
 import argparse
 import os
@@ -38,49 +41,64 @@ def create_audio_symlinks(ps_root: Path, output_dir: Path):
 
 
 def copy_segment_labels(ps_root: Path, output_dir: Path, resolution: float):
-    """Copy segment label .npy files to BAM's expected location."""
+    """Copy segment label .npy files to BAM's expected location.
+
+    BAM formats resolution as Python's default float str, e.g. 0.16 -> '0.16'.
+    """
     for split in ["train", "dev", "eval"]:
-        src = ps_root / "segment_labels" / f"{split}_seglab_{resolution:.2f}.npy"
-        dst = output_dir / f"{split}_seglab_{resolution:.2f}.npy"
-        if not dst.exists():
-            shutil.copy2(str(src), str(dst))
-            print(f"Copied: {dst}")
-        else:
-            print(f"Exists: {dst}")
+        src = ps_root / "segment_labels" / f"{split}_seglab_{resolution}.npy"
+        dst = output_dir / f"{split}_seglab_{resolution}.npy"
+        if dst.exists():
+            dst.unlink()
+        shutil.copy2(str(src), str(dst))
+        print(f"Copied: {dst}")
 
 
 def generate_boundary_labels(ps_root: Path, output_dir: Path, resolution: float):
     """Generate per-utterance boundary labels from segment labels.
 
-    Boundary = 1 where segment label changes between adjacent frames.
-    This replicates BAM's ps_preprocess.py logic without modifying the repo.
+    Replicates BAM's ps_preprocess.py:get_boundary_labels() exactly:
+    - Iterates over labels, tracks 'last' label
+    - On transition: splice_index = i if label==0 else i-1
+    - Collects unique splice indices, marks boundary[pos] = 1
 
     NOTE: Uses RAW label convention from npy files (1=bonafide, 0=spoof).
-    Boundary detection works on transitions regardless of convention.
+    BAM's boundary path format: boundary_{resolution}_labels/{split}/{utt_id}_boundary.npy
     """
-    boundary_dir = output_dir / "boundary"
-    boundary_dir.mkdir(parents=True, exist_ok=True)
-
     for split in ["train", "dev", "eval"]:
-        label_path = ps_root / "segment_labels" / f"{split}_seglab_{resolution:.2f}.npy"
+        boundary_dir = output_dir / f"boundary_{resolution}_labels" / split
+        boundary_dir.mkdir(parents=True, exist_ok=True)
+
+        label_path = ps_root / "segment_labels" / f"{split}_seglab_{resolution}.npy"
         seg_labels = np.load(str(label_path), allow_pickle=True).item()
 
-        count = 0
+        all_count = 0
+        boundary_count = 0
         for utt_id, labels in seg_labels.items():
-            int_labels = np.array([int(x) for x in labels], dtype=np.int64)
-            # Boundary = where label changes
-            boundary = np.zeros_like(int_labels)
-            if len(int_labels) > 1:
-                changes = np.where(int_labels[1:] != int_labels[:-1])[0]
-                for idx in changes:
-                    boundary[idx] = 1
-                    if idx + 1 < len(boundary):
-                        boundary[idx + 1] = 1
+            int_labels = labels.astype(np.int32)
+            all_count += len(int_labels)
 
-            np.save(str(boundary_dir / f"{utt_id}_boundary.npy"), boundary)
-            count += 1
+            # Exact BAM logic from ps_preprocess.py
+            pos = []
+            last = None
+            for i, label in enumerate(int_labels):
+                if i == 0:
+                    last = label
+                if label != last:
+                    splice_index = i if label == 0 else i - 1
+                    pos.append(splice_index)
+                    last = label
 
-        print(f"Generated {count} boundary labels for {split}")
+            pos = list(set(pos))
+            boundary_count += len(pos)
+            boundary_label = np.zeros_like(int_labels)
+            if pos:
+                boundary_label[pos] = 1.0
+            np.save(str(boundary_dir / f"{utt_id}_boundary.npy"), boundary_label)
+
+        ratio = (all_count - boundary_count) / max(boundary_count, 1)
+        print(f"[{split}] Generated {len(seg_labels)} boundary labels, "
+              f"pos_weight: {ratio:.1f}")
 
 
 def main():
@@ -89,8 +107,8 @@ def main():
                         help="Path to PartialSpoof database/ directory")
     parser.add_argument("--output_dir", type=str, required=True,
                         help="Output directory for BAM data")
-    parser.add_argument("--resolution", type=float, default=0.02,
-                        help="Label resolution in seconds (default: 0.02 = 20ms)")
+    parser.add_argument("--resolution", type=float, default=0.16,
+                        help="Label resolution in seconds (default: 0.16 = 160ms, BAM native)")
     args = parser.parse_args()
 
     ps_root = Path(args.ps_root)
