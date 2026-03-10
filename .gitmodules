@@ -1,0 +1,3 @@
+[submodule "baselines/repos/BAM"]
+	path = baselines/repos/BAM
+	url = https://github.com/media-sec-lab/BAM.git
