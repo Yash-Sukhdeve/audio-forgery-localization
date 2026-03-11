@@ -3,4 +3,30 @@
 
 # Claude Code project config
 .claude/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Checkpoints and large model files
 checkpoints/
+
+# Large auto-generated files (keep curated results in results/<model>/)
+results/dashboards/
+results/bam_training.log
+*.log
+
+# Research PDFs (large files, not for version control)
+*.pdf
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
