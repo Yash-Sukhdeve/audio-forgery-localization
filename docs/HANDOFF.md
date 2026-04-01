@@ -1,7 +1,8 @@
 # FARA Audio Forgery Localization — Complete Project Handoff
 
-**Date**: 2026-03-31
-**Session**: Claude Code session spanning 2026-03-24 to 2026-03-31
+**Date**: 2026-04-01
+**Session**: Claude Code session spanning 2026-03-24 to 2026-04-01
+**Commit**: a572ada (pushed to GitHub)
 **Project**: Reimplementation of FARA (Luo et al., IEEE/ACM TASLP 2026) with head-to-head baseline comparison
 **GitHub**: https://github.com/Yash-Sukhdeve/audio-forgery-localization
 
@@ -247,7 +248,39 @@ torch.cdist() in float16 (AMP autocast)
 
 ---
 
-## 8. Known Issues & Workarounds
+## 8. Project Statistics (from artifact scan)
+
+| Category | Count |
+|---|---|
+| Total source files (excl tests) | 40 |
+| Total source lines (excl tests) | 4,439 |
+| Total test files | 19 |
+| Total test functions | 103 |
+| Total test classes | 25 |
+| Tests passing | 96/96 (dashboard), 103 collected |
+| FARA model params | 73.53M (trainable) |
+| WavLM params | 315.45M (frozen) |
+| BAM checkpoints (total) | 32 (16 per resolution) |
+| Disk: BAM checkpoints | ~44 GB |
+| Disk: FARA checkpoints | ~1.7 GB |
+| Disk: WavLM pretrained | 1.2 GB |
+
+### Missing from requirements.txt (runtime dependencies)
+- `s3prl` — Required for WavLM loading (installed but not listed)
+- `pytorch-lightning` — Required by BAM baseline (installed but not listed)
+- `plotly` — Required by dashboard.py
+- `flask` — Required by dashboard.py live server mode
+- `tensorboard` — Required by TensorBoardCallback
+
+### Machine-Specific Paths in Configs
+All configs reference absolute paths under `/media/lab2208/ssd/`. These need updating if the project moves to a different machine:
+- `configs/fara.yaml` — dataset_root, wavlm checkpoint, output dir
+- `scripts/train_bam.sh` — PROJECT_DIR, BAM_DIR, PS_ROOT
+- `scripts/retrain_bam_002.sh` — same paths
+
+---
+
+## 9. Known Issues & Workarounds
 
 | Issue | Workaround | File |
 |---|---|---|
@@ -261,33 +294,29 @@ torch.cdist() in float16 (AMP autocast)
 
 ---
 
-## 9. Uncommitted Changes (17 files)
+## 10. Git History
+
+All Phase 2-3 work committed and pushed in `a572ada`:
+- 33 files changed, 4,099 insertions
+- Pushed to `origin/main` on 2026-04-01
 
 ```
-M  core/training/__init__.py
-?? configs/fara.yaml
-?? core/data/boundary.py
-?? core/training/callbacks.py
-?? core/training/trainer.py
-?? docs/plans/2026-03-24-fara-phase2-design.md
-?? docs/HANDOFF.md
-?? fara/
-?? results/bam/bam_002_overfitting_analysis.png
-?? results/bam/eval_results_002.txt
-?? results/dashboard.html
-?? results/dashboard_data.json
-?? results/fara/
-?? scripts/retrain_bam_002.sh
-?? scripts/update_dashboard.py
-?? tests/fara/
-?? tests/test_fara_integration.py
+a572ada feat: FARA reimplementation (Phase 2-3), BAM 0.02s retrain, NaN fixes
+5403be3 docs: add design plans, BAM eval results, and project config
+b2057a9 feat(scripts): add reusable web-based training dashboard
+0102ed3 fix(baselines): correct BAM data prep for native 0.16s resolution
+fb2203c feat(baselines): add BAM wrappers, config override, eval bridge, and train script
+8b69f4d feat(baselines): add BAM data preparation wrapper
+ffb7986 chore: add checkpoints to gitignore, install s3prl
+58d977e chore: add BAM as git submodule
+8c5c70b feat(core): add pad collation for variable-length batching
+3fd4f35 test: add integration tests for data pipeline and evaluation
+26bca0a feat(core): add PartialSpoof dataset loader
 ```
-
-**Next action**: Commit these and push to GitHub.
 
 ---
 
-## 10. Critical Constraints (DO NOT VIOLATE)
+## 11. Critical Constraints (DO NOT VIOLATE)
 
 1. **NEVER modify baseline repos** (BAM, CFPRF, PSDS) — wrappers only
 2. **Every default must be traceable** — to paper equation or documented as assumption
