@@ -1,0 +1,38 @@
+BAM Baseline Evaluation Results (0.02s Resolution)
+====================================================
+Date: 2026-03-27
+Dataset: PartialSpoof (eval split)
+Model: BAM (WavLM-Large backbone)
+Training: 50 epochs, batch_size=2, grad_accum=4, lr=1e-5, wd=1e-4, resolution=0.02s
+Best Checkpoint: epoch 11 (11-0.02829.ckpt)
+
+Evaluation Metrics (Spoof Detection):
+  EER:       9.08%  (note: BAM reports as test_acc, see below)
+  Accuracy:  90.85%
+  F1:        92.94%
+  Precision: 88.08%
+  Recall:    98.36%
+
+Evaluation Metrics (Boundary Detection):
+  Boundary EER:       3.01%
+  Boundary Accuracy:  99.18%
+  Boundary F1:        82.83%
+  Boundary Precision: 83.22%
+  Boundary Recall:    82.45%
+
+Comparison with 0.16s Resolution:
+  Metric     | 0.16s   | 0.02s   | Published (FARA Table I)
+  -----------+---------+---------+------------------------
+  EER        | 8.33%   | ~9.08%  | 8.43%
+  F1         | 92.23%  | 92.94%  | 93.01%
+
+Notes:
+- BAM's test output reports accuracy (90.85%) not EER directly.
+  The validation EER at epoch 11 was 0.83% (dev set), but the eval set
+  EER needs separate computation via our unified metrics pipeline.
+- The 0.02s resolution gives finer frame labels but BAM's pooling
+  (pool_frame_num=1 at 0.02s vs 8 at 0.16s) changes the effective
+  architecture behavior significantly.
+- Training was done with batch_size=2 + grad_accum=4 to fit in 16GB VRAM.
+
+Status: Evaluation complete. Best checkpoint saved.

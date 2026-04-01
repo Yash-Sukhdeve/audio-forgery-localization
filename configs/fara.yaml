@@ -1,0 +1,39 @@
+model:
+  d_model: 1024
+  n_wavlm_layers: 24
+  mask_k: 12
+  sincnet_channels: 80
+  sincnet_kernel: 251
+  sincnet_stride: 320
+  num_experts: 8
+  num_classes: 2
+
+training:
+  max_epochs: 50
+  batch_size: 8
+  lr: 1.0e-5
+  weight_decay: 1.0e-4
+  beta1: 0.9
+  beta2: 0.999
+  grad_clip: 1.0
+  patience: 10
+  seed: 42
+  num_workers: 4
+  log_interval: 50
+
+loss:
+  spoof_weight: 1.0
+  boundary_weight: 0.5
+  crl_weight: 0.2
+  beta: 0.3
+
+data:
+  dataset_root: /media/lab2208/ssd/datasets/PartialSpoof/database
+  target_sr: 16000
+  frame_duration_ms: 20
+
+wavlm:
+  checkpoint: /media/lab2208/ssd/Explainablility/Localization/checkpoints/wavlm_large.pt
+
+output:
+  exp_dir: results/fara

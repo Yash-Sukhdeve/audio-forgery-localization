@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="30">
+<title>FARA Audio Forgery Localization — Project Dashboard</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',system-ui,sans-serif; background:#0d1117; color:#c9d1d9; padding:20px; max-width:1400px; margin:0 auto; }
+.header { background:linear-gradient(135deg,#161b22,#1c2333); border:1px solid #30363d; border-radius:12px; padding:24px; margin-bottom:20px; }
+.header h1 { font-size:22px; color:#58a6ff; margin-bottom:4px; }
+.header .sub { color:#8b949e; font-size:13px; }
+.header .paper { color:#d2a8ff; font-size:12px; margin-top:6px; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+.card { background:#161b22; border:1px solid #30363d; border-radius:10px; padding:18px; margin-bottom:16px; }
+.card h3 { color:#58a6ff; font-size:13px; margin-bottom:12px; text-transform:uppercase; letter-spacing:1px; }
+.badge { display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; }
+.badge.complete { background:#238636; color:#fff; }
+.badge.active { background:#d29922; color:#000; animation:pulse 2s infinite; }
+.badge.pending { background:#30363d; color:#8b949e; }
+.badge.fixed { background:#1f6feb; color:#fff; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.pipeline { display:flex; gap:6px; flex-wrap:wrap; margin:12px 0; }
+.phase { flex:1; min-width:110px; background:#21262d; border-radius:8px; padding:8px; text-align:center; border:2px solid #30363d; }
+.phase.complete { border-color:#238636; background:#0d1f0d; }
+.phase.active { border-color:#d29922; background:#1a1500; }
+.phase .name { font-size:11px; color:#c9d1d9; margin-bottom:4px; font-weight:600; }
+.phase .detail { font-size:10px; color:#8b949e; margin-top:4px; }
+.metric { text-align:center; padding:8px; }
+.metric .value { font-size:26px; font-weight:bold; color:#58a6ff; }
+.metric .label { font-size:10px; color:#8b949e; text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+.metric.green .value { color:#3fb950; }
+.metric.amber .value { color:#d29922; }
+table { width:100%; border-collapse:collapse; margin:8px 0; }
+th,td { padding:7px 10px; text-align:left; border-bottom:1px solid #21262d; font-size:12px; }
+th { color:#8b949e; font-size:10px; text-transform:uppercase; letter-spacing:1px; }
+.chart { width:100%; height:120px; margin:8px 0; }
+.check { color:#3fb950; } .warn { color:#d29922; } .err { color:#f85149; }
+.progress-bar { height:18px; background:#21262d; border-radius:9px; overflow:hidden; margin:8px 0; }
+.progress-fill { height:100%; background:linear-gradient(90deg,#1f6feb,#58a6ff); border-radius:9px; transition:width 0.5s; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; color:#fff; min-width:36px; }
+.timeline { position:relative; padding-left:24px; }
+.timeline::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:2px; background:#30363d; }
+.tl-item { position:relative; margin-bottom:12px; padding-left:16px; }
+.tl-item::before { content:''; position:absolute; left:-20px; top:4px; width:12px; height:12px; border-radius:50%; border:2px solid #30363d; background:#0d1117; }
+.tl-item.done::before { background:#238636; border-color:#238636; }
+.tl-item.active::before { background:#d29922; border-color:#d29922; animation:pulse 2s infinite; }
+.tl-item .tl-date { font-size:10px; color:#8b949e; }
+.tl-item .tl-title { font-size:13px; color:#c9d1d9; font-weight:600; }
+.tl-item .tl-detail { font-size:11px; color:#8b949e; margin-top:2px; }
+.tl-item .tl-metric { font-size:11px; color:#3fb950; font-weight:600; }
+details { cursor:pointer; }
+details summary { color:#58a6ff; font-size:12px; margin-bottom:8px; }
+.footer { text-align:center; color:#484f58; font-size:11px; margin-top:20px; padding:10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>FARA Audio Forgery Localization</h1>
+  <div class="sub">Project Dashboard — Auto-refreshes every 30s — <span id="updated">Loading...</span></div>
+  <div class="paper">Luo et al., "A Robust Region-Aware Framework for Audio Forgery Localization", IEEE/ACM TASLP 2026</div>
+</div>
+
+<!-- Phase Pipeline -->
+<div class="card">
+  <h3>Phase Pipeline</h3>
+  <div class="pipeline" id="pipeline"></div>
+</div>
+
+<div class="grid">
+  <!-- LEFT: Live Training + Charts -->
+  <div>
+    <div class="card">
+      <h3>FARA Training (Live)</h3>
+      <div id="training-status">Loading...</div>
+      <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%">0%</div></div>
+      <div class="grid3" id="live-metrics"></div>
+      <canvas id="chart-loss" class="chart"></canvas>
+      <canvas id="chart-eer" class="chart"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>Results Comparison (ASVPS Eval)</h3>
+      <table>
+        <tr><th>Method</th><th>Res.</th><th>Val EER</th><th>Val F1</th><th>Published EER</th><th>Status</th></tr>
+        <tbody id="results-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT: Timeline + Audit + Inventory -->
+  <div>
+    <!-- Accomplishments Timeline -->
+    <div class="card">
+      <h3>Project Timeline &amp; Accomplishments</h3>
+      <div class="timeline">
+        <div class="tl-item done">
+          <div class="tl-date">2026-03-09</div>
+          <div class="tl-title">Phase 0: Core Infrastructure</div>
+          <div class="tl-detail">Built shared core library: data loaders (PartialSpoof, LlamaPS), metrics (EER, F1), audio I/O, config system, collation</div>
+          <div class="tl-metric">48 core tests passing</div>
+        </div>
+        <div class="tl-item done">
+          <div class="tl-date">2026-03-11</div>
+          <div class="tl-title">Phase 1: BAM Baseline (0.16s)</div>
+          <div class="tl-detail">Cloned BAM as submodule. External wrapper pattern — never modified repo. Data prep with boundary labels. Trained 50 epochs on PartialSpoof.</div>
+          <div class="tl-metric">EER: 8.33% (published: 8.43%) — PASSED</div>
+        </div>
+        <div class="tl-item done">
+          <div class="tl-date">2026-03-24</div>
+          <div class="tl-title">Phase 2: FARA Components</div>
+          <div class="tl-detail">Implemented all 6 FARA model components (LearnableMask, SincNet, FeatureFusion, CMoE, BoundaryEnhance, ClassifyHead), 2 loss functions (GCL, CombinedLoss), training infrastructure (Trainer, Callbacks)</div>
+          <div class="tl-metric">96/96 tests passing, all equations verified</div>
+        </div>
+        <div class="tl-item done">
+          <div class="tl-date">2026-03-24</div>
+          <div class="tl-title">BAM Retrain at 0.02s Resolution</div>
+          <div class="tl-detail">Retrained BAM at 20ms for fair FARA comparison. Discovered argparse type=int bug — monkey-patch workaround. OOM at batch=8 — fixed with batch=2 + grad_accum=4. 50 epochs complete.</div>
+          <div class="tl-metric">Best Val EER: 0.83% (epoch 11), 16 checkpoints saved</div>
+        </div>
+        <div class="tl-item done">
+          <div class="tl-date">2026-03-24</div>
+          <div class="tl-title">WavLM Feature Extractor</div>
+          <div class="tl-detail">Created wavlm_extractor.py — frozen WavLM-Large (315M params) via s3prl. Extracts all 24 transformer hidden states for LearnableMask.</div>
+          <div class="tl-metric">Integrated into FARATrainer pipeline</div>
+        </div>
+        <div class="tl-item done">
+          <div class="tl-date">2026-03-27</div>
+          <div class="tl-title">Science Audit</div>
+          <div class="tl-detail">Full citation audit: verified 10 equations against paper. Found &amp; removed 1 fabricated citation ("Xia et al. 2025"). Documented 19 engineering assumptions not in paper.</div>
+          <div class="tl-metric">1 critical fix, 19 assumptions documented</div>
+        </div>
+        <div class="tl-item active">
+          <div class="tl-date">2026-03-27</div>
+          <div class="tl-title">Phase 3: FARA Training</div>
+          <div class="tl-detail" id="tl-fara-detail">Training in progress...</div>
+          <div class="tl-metric" id="tl-fara-metric">EER improving...</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-date">Upcoming</div>
+          <div class="tl-title">Phase 4: Cross-dataset Evaluation</div>
+          <div class="tl-detail">FARA + BAM on LlamaPartialSpoof. Target: FARA EER 33.17%, F1 64.87%</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-date">Upcoming</div>
+          <div class="tl-title">Phase 5: CFPRF + PSDS Baselines</div>
+          <div class="tl-detail">Clone repos, write wrappers, train, verify published numbers</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-date">Upcoming</div>
+          <div class="tl-title">Phase 6: Final Analysis</div>
+          <div class="tl-detail">Full comparison table, decision on Explainability integration</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Science Audit -->
+    <div class="card">
+      <h3>Science Audit</h3>
+      <div id="audit-panel"></div>
+    </div>
+
+    <!-- File Inventory -->
+    <div class="card">
+      <h3>File Inventory</h3>
+      <div id="inventory" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+      <details style="margin-top:10px">
+        <summary>Key Files Created This Session</summary>
+        <table>
+          <tr><th>File</th><th>Purpose</th></tr>
+          <tr><td>fara/model/feature_fusion.py</td><td>Gated WavLM + SincNet fusion</td></tr>
+          <tr><td>fara/model/cmoe.py</td><td>Cluster-Based MoE (K=8, EMA routing)</td></tr>
+          <tr><td>fara/model/boundary_enhance.py</td><td>Boundary conv + classify heads + attention mask</td></tr>
+          <tr><td>fara/model/fara.py</td><td>Full FARA model assembly</td></tr>
+          <tr><td>fara/model/wavlm_extractor.py</td><td>Frozen WavLM-Large feature extractor</td></tr>
+          <tr><td>fara/losses/group_contrastive.py</td><td>GCL loss (Eq. 5-7, beta=0.3)</td></tr>
+          <tr><td>fara/losses/combined_loss.py</td><td>L = L_spoof + 0.5*L_boundary + 0.2*L_CRL</td></tr>
+          <tr><td>core/training/trainer.py</td><td>Generic training loop with AMP + callbacks</td></tr>
+          <tr><td>core/training/callbacks.py</td><td>Checkpoint, EarlyStopping, TensorBoard</td></tr>
+          <tr><td>core/data/boundary.py</td><td>Boundary label generation from frame labels</td></tr>
+          <tr><td>fara/train.py</td><td>FARA training entry point with WavLM integration</td></tr>
+          <tr><td>configs/fara.yaml</td><td>Full training configuration</td></tr>
+          <tr><td>scripts/retrain_bam_002.sh</td><td>BAM 0.02s retrain with argparse fix</td></tr>
+          <tr><td>scripts/update_dashboard.py</td><td>Dashboard data generator</td></tr>
+        </table>
+      </details>
+    </div>
+
+    <!-- BAM Overfitting -->
+    <div class="card">
+      <h3>BAM 0.02s Training Summary</h3>
+      <table>
+        <tr><th>Epoch</th><th>Val EER</th><th>Val F1</th><th>Val Loss</th></tr>
+        <tr><td>2</td><td>1.16%</td><td>98.95%</td><td>0.0407</td></tr>
+        <tr><td>5</td><td>1.10%</td><td>99.02%</td><td>0.0366</td></tr>
+        <tr style="background:#0d1f0d"><td><b>11 (best)</b></td><td><b>0.83%</b></td><td><b>99.28%</b></td><td><b>0.0283</b></td></tr>
+        <tr><td>14</td><td>0.88%</td><td>99.25%</td><td>0.0314</td></tr>
+        <tr><td>20</td><td>0.91%</td><td>99.22%</td><td>0.0361</td></tr>
+        <tr><td>47</td><td>0.93%</td><td>—</td><td>0.0393</td></tr>
+      </table>
+      <div style="font-size:11px;color:#8b949e;margin-top:6px">Overfitting after epoch 11. Best checkpoint: 11-0.02829.ckpt (1.4 GB)</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">Audio Forgery Localization — FARA Reimplementation &amp; Baseline Comparison | GPU: RTX 4080 16GB | Datasets: PartialSpoof, LlamaPartialSpoof</div>
+
+<script>
+const DATA_URL = 'dashboard_data.json';
+
+async function loadData() {
+  try {
+    const r = await fetch(DATA_URL + '?t=' + Date.now());
+    if (!r.ok) { document.getElementById('updated').textContent = 'Error loading data'; return; }
+    const d = await r.json();
+    render(d);
+  } catch(e) {
+    document.getElementById('updated').textContent = 'Fetch error — run: python scripts/update_dashboard.py';
+  }
+}
+
+function render(d) {
+  document.getElementById('updated').textContent = new Date(d.updated_at).toLocaleString();
+
+  // Pipeline
+  const pp = document.getElementById('pipeline');
+  pp.innerHTML = d.phases.map(p => {
+    const cls = p.status === 'complete' ? 'complete' : p.status === 'in_progress' ? 'active' : '';
+    const badge = p.status === 'complete' ? '<span class="badge complete">DONE</span>'
+      : p.status === 'in_progress' ? '<span class="badge active">LIVE</span>'
+      : '<span class="badge pending">PENDING</span>';
+    return `<div class="phase ${cls}"><div class="name">${p.name}</div>${badge}<div class="detail">${p.detail||''}</div></div>`;
+  }).join('');
+
+  // Training
+  const f = d.fara_training;
+  const nc = f.epochs_completed.length;
+  const pct = ((nc + f.current_step/f.total_steps) / f.max_epochs * 100).toFixed(1);
+  const progEl = document.getElementById('progress');
+  progEl.style.width = Math.max(pct, 2) + '%';
+  progEl.textContent = pct + '%';
+
+  const status = f.training_active
+    ? `<span class="badge active">TRAINING</span> Epoch ${f.current_epoch}/${f.max_epochs} — Step ${f.current_step}/${f.total_steps}`
+    : `<span class="badge pending">IDLE</span> ${nc} epochs completed`;
+  document.getElementById('training-status').innerHTML = status;
+
+  const bestEER = f.val_eers.length ? Math.min(...f.val_eers.map(v=>v.value)) : null;
+  const bestF1 = f.val_f1s.length ? Math.max(...f.val_f1s.map(v=>v.value)) : null;
+
+  document.getElementById('live-metrics').innerHTML = `
+    <div class="metric ${bestEER && bestEER < 0.06 ? 'green' : 'amber'}"><div class="value">${bestEER ? (bestEER*100).toFixed(2)+'%' : '—'}</div><div class="label">Best Val EER</div></div>
+    <div class="metric green"><div class="value">${bestF1 ? (bestF1*100).toFixed(1)+'%' : '—'}</div><div class="label">Best Val F1</div></div>
+    <div class="metric"><div class="value">${f.estimated_remaining_human || 'N/A'}</div><div class="label">ETA</div></div>
+  `;
+
+  // Update timeline FARA entry
+  if (f.val_eers.length) {
+    const latest = f.val_eers[f.val_eers.length-1];
+    document.getElementById('tl-fara-detail').textContent =
+      `Epoch ${nc}/${f.max_epochs}. WavLM 315M (frozen) + FARA 73.5M (trainable). ${f.estimated_remaining_human || ''} remaining.`;
+    document.getElementById('tl-fara-metric').textContent =
+      `Latest EER: ${(latest.value*100).toFixed(2)}% (target: 5.98%)`;
+  }
+
+  drawChart('chart-loss', f.train_losses, f.val_losses, 'Loss (train=blue, val=orange)', '#2196F3', '#FF9800');
+  drawChart('chart-eer', f.val_eers, null, 'Val EER (target: 5.98%)', '#E91E63', null, 0.0598);
+
+  // Results
+  const fLatestEER = f.val_eers.length ? f.val_eers[f.val_eers.length-1] : null;
+  const fLatestF1 = f.val_f1s.length ? f.val_f1s[f.val_f1s.length-1] : null;
+  const b16 = d.bam_016;
+  document.getElementById('results-table').innerHTML = `
+    <tr><td><b>FARA</b></td><td>0.02s</td><td>${fLatestEER ? (fLatestEER.value*100).toFixed(2)+'%' : '—'}</td><td>${fLatestF1 ? (fLatestF1.value*100).toFixed(1)+'%' : '—'}</td><td>5.98%</td><td><span class="badge active">Ep ${nc}</span></td></tr>
+    <tr><td>BAM</td><td>0.16s</td><td>${b16.eer}%</td><td>${b16.f1}%</td><td>${b16.published_eer}%</td><td><span class="badge complete">Done</span></td></tr>
+    <tr><td>BAM</td><td>0.02s</td><td>0.83%</td><td>99.28%</td><td>—</td><td><span class="badge complete">Done</span></td></tr>
+    <tr><td>CFPRF</td><td>—</td><td>—</td><td>—</td><td>7.41%</td><td><span class="badge pending">—</span></td></tr>
+    <tr><td>PSDS</td><td>—</td><td>—</td><td>—</td><td>11.01%</td><td><span class="badge pending">—</span></td></tr>
+  `;
+
+  const a = d.science_audit;
+  document.getElementById('audit-panel').innerHTML = `
+    <div style="margin-bottom:4px"><span class="check">&#10003;</span> ${a.verified_equations} equations verified (Eq. 2-8)</div>
+    <div style="margin-bottom:4px"><span class="badge fixed">FIX</span> ${a.critical_issues_fixed} fabricated citation removed</div>
+    <div style="margin-bottom:4px"><span class="warn">&#9888;</span> ${a.engineering_assumptions} engineering assumptions (k, beta, MLP dims, etc.)</div>
+    <div style="margin-bottom:4px"><span class="warn">&#9888;</span> PyTorch K-means used instead of FAISS (paper specifies FAISS)</div>
+    <div><span class="warn">&#9888;</span> Author contact pending: ${a.author_contact}</div>
+  `;
+
+  document.getElementById('inventory').innerHTML = d.file_inventory.map(f =>
+    `<div style="background:#21262d;border-radius:8px;padding:8px 14px;min-width:100px;text-align:center"><div style="font-size:18px;font-weight:bold;color:#58a6ff">${f.file_count}</div><div style="font-size:10px;color:#8b949e">${f.path}</div></div>`
+  ).join('');
+}
+
+function drawChart(canvasId, series1, series2, title, color1, color2, targetLine) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !series1 || series1.length < 2) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.offsetWidth * 2;
+  const H = canvas.height = 240;
+  ctx.clearRect(0, 0, W, H);
+  const pad = {t:30, r:20, b:30, l:60};
+  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  let allVals = series1.map(v=>v.value);
+  if (series2) allVals = allVals.concat(series2.map(v=>v.value));
+  if (targetLine != null) allVals.push(targetLine);
+  const yMin = Math.min(...allVals) * 0.85;
+  const yMax = Math.max(...allVals) * 1.1;
+  const allEpochs = series1.map(v=>v.epoch);
+  const xMin = Math.min(...allEpochs);
+  const xMax = Math.max(...allEpochs, 1);
+  const toX = e => pad.l + (e - xMin) / (xMax - xMin) * cw;
+  const toY = v => pad.t + (1 - (v - yMin) / (yMax - yMin)) * ch;
+  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + ch * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#8b949e'; ctx.font = '18px sans-serif';
+    const val = yMax - (yMax - yMin) * i / 4;
+    ctx.fillText(val.toFixed(4), 2, y + 5);
+  }
+  if (targetLine != null) {
+    ctx.strokeStyle = '#f8514966'; ctx.lineWidth = 2; ctx.setLineDash([8,4]);
+    ctx.beginPath(); ctx.moveTo(pad.l, toY(targetLine)); ctx.lineTo(W-pad.r, toY(targetLine)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#f85149'; ctx.font = '18px sans-serif';
+    ctx.fillText('Target: '+(targetLine*100).toFixed(2)+'%', W-pad.r-200, toY(targetLine)-8);
+  }
+  function drawLine(data, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = 3;
+    ctx.beginPath();
+    data.forEach((p,i) => { const x=toX(p.epoch), y=toY(p.value); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+    ctx.stroke();
+    data.forEach(p => { ctx.fillStyle=color; ctx.beginPath(); ctx.arc(toX(p.epoch),toY(p.value),5,0,Math.PI*2); ctx.fill(); });
+  }
+  drawLine(series1, color1);
+  if (series2 && series2.length >= 2) drawLine(series2, color2);
+  ctx.fillStyle = '#c9d1d9'; ctx.font = 'bold 20px sans-serif';
+  ctx.fillText(title, pad.l, 20);
+}
+
+loadData();
+</script>
+</body>
+</html>
